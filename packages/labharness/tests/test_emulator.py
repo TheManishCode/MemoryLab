@@ -171,14 +171,17 @@ def test_child_crash_is_detected_not_hung(emu: Emulator) -> None:
 
 
 def test_memory_limit_is_enforced_in_the_child(bundle) -> None:  # type: ignore[no-untyped-def]
-    """Drive the worker entry point below the Limits floor: the rlimit must bite in the child."""
+    """Drive the worker entry point far below the Limits floor: the rlimit must bite in the child.
+
+    RLIMIT_AS counts virtual address space, which depends on the host (core count, glibc arenas, which GL/SDL libraries resolve): a hosted CI
+    runner starts PyBoy inside 512 MiB where a workstation cannot. 128 MiB is below Python plus numpy alone on any host, so it fails everywhere."""
     import multiprocessing as mp
 
     from labharness import _wire
 
     ctx = mp.get_context("spawn")
     parent, child = ctx.Pipe(duplex=True)
-    proc = ctx.Process(target=_worker.main, args=(child, bundle.rom, False, 512 * 1024**2, 3600), daemon=True)
+    proc = ctx.Process(target=_worker.main, args=(child, bundle.rom, False, 128 * 1024**2, 3600), daemon=True)
     proc.start()
     child.close()
     try:

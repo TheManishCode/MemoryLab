@@ -196,9 +196,16 @@ def raw_create(stack: Running, name: str, doc: dict[str, object]) -> tuple[int, 
     import http.client
     import json as _json
     conn = http.client.HTTPConnection("127.0.0.1", stack.port, timeout=30)
-    conn.request("POST", f"/v1.56/containers/create?name={name}", _json.dumps(doc), {"Content-Type": "application/json"})
+    conn.request("POST", f"/v{daemon_api_version()}/containers/create?name={name}", _json.dumps(doc), {"Content-Type": "application/json"})
     r = conn.getresponse()
     return r.status, r.read().decode()
+
+
+def daemon_api_version() -> str:
+    """The daemon's own API version (1.56 on a current Docker, 1.48 on a hosted runner), which is also what the CLI negotiates down to."""
+    import subprocess
+    out = subprocess.run(["docker", "version", "--format", "{{.Server.APIVersion}}"], capture_output=True, text=True, check=True)
+    return min(out.stdout.strip(), "1.56", key=lambda v: tuple(int(x) for x in v.split(".")))
 
 
 def good_doc(stack: Running, run_id: str) -> dict[str, object]:

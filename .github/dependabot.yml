@@ -7,6 +7,7 @@ updates:
     schedule: {interval: weekly, day: monday}
     groups:
       actions: {patterns: ["*"]}
+    cooldown: {default-days: 7}              # a release is at least a week old before it is proposed (zizmor dependabot-cooldown); advisories still bypass it
     commit-message: {prefix: "ci"}
     labels: [dependencies, github-actions]
 
@@ -15,6 +16,7 @@ updates:
     schedule: {interval: weekly, day: monday}
     groups:
       npm-minor-patch: {update-types: [minor, patch]}
+    cooldown: {default-days: 7}              # a release is at least a week old before it is proposed (zizmor dependabot-cooldown); advisories still bypass it
     commit-message: {prefix: "web"}
     labels: [dependencies, web]
 
@@ -23,6 +25,7 @@ updates:
     schedule: {interval: weekly, day: monday}
     groups:
       python-minor-patch: {update-types: [minor, patch]}
+    cooldown: {default-days: 7}              # a release is at least a week old before it is proposed (zizmor dependabot-cooldown); advisories still bypass it
     commit-message: {prefix: "py"}
     labels: [dependencies, python]
 
@@ -31,5 +34,6 @@ updates:
     schedule: {interval: weekly, day: monday}
     groups:
       docker-base-images: {patterns: ["*"]}
+    cooldown: {default-days: 7}              # a release is at least a week old before it is proposed (zizmor dependabot-cooldown); advisories still bypass it
     commit-message: {prefix: "docker"}
     labels: [dependencies, docker]

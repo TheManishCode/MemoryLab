@@ -23,7 +23,7 @@ from .rom import RomInfo, inspect_rom
 
 SCREEN_H, SCREEN_W = 144, 160
 MAX_STATE_BYTES = 16 * 1024 * 1024
-# RLIMIT_AS counts virtual address space. Measured: 512 MiB cannot even import PyBoy,
+# RLIMIT_AS counts virtual address space. Measured on one workstation: 512 MiB cannot import PyBoy (a hosted runner can),
 # 768 MiB starts and runs. The container limit (Milestone 3) is the real memory bound.
 MIN_MEMORY_LIMIT_BYTES = 768 * 1024**2
 

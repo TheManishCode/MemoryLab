@@ -220,7 +220,10 @@ def _shape(doc: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Default-deny on the structure: only the exact-case fields `docker run` sends, at every level. Returns the NEW document built from
     those fields alone (what is forwarded; the client's bytes never are) and the reasons to refuse."""
     bad: list[str] = []
-    extra = sorted(set(doc) - set(TOP_KEYS))
+    # Docker CLI 29 talking to an older daemon (API < 1.50, e.g. a hosted CI runner) negotiates down and then also sends the legacy
+    # Config.OnBuild. Empty it is inert, and it is never forwarded (the forwarded document is rebuilt from TOP_KEYS); non-empty stays refused.
+    allowed = set(TOP_KEYS) | ({"OnBuild"} if _empty(doc.get("OnBuild")) else set())
+    extra = sorted(set(doc) - allowed)
     if extra:
         bad.append("unknown field " + ", ".join(k[:40] for k in extra))
     hc = doc.get("HostConfig")
