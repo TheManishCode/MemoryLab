@@ -22,12 +22,38 @@ from .base import (
                    Usage,
 )
 from .fake import FakeProvider, ScriptedStep
-from .registry import PROVIDER_HOSTS, PROVIDER_MODELS, check_model
+from .openai_compat import OpenAICompatProvider
+from .registry import OPENAI_COMPAT, PROVIDER_HOSTS, PROVIDER_MODELS, check_model
 from .secret import SecretKey
 
 __all__ = [
-    "PROVIDER_HOSTS", "PROVIDER_MODELS", "BadRequest", "BadResponse", "Block", "FakeProvider", "ImageBlock",
-    "KeyRejected", "Message", "Overloaded", "Provider", "ProviderError", "ProviderRequest", "ProviderResult",
-    "ProviderTimeout", "RateLimited", "ScriptedStep", "SecretKey", "ServerError", "SystemBlock", "TextBlock",
-    "ToolCall", "ToolResultBlock", "ToolSchema", "ToolUseBlock", "Usage", "check_model",
+                   "OPENAI_COMPAT",
+                   "PROVIDER_HOSTS",
+                   "PROVIDER_MODELS",
+                   "BadRequest",
+                   "BadResponse",
+                   "Block",
+                   "FakeProvider",
+                   "ImageBlock",
+                   "KeyRejected",
+                   "Message",
+                   "OpenAICompatProvider",
+                   "Overloaded",
+                   "Provider",
+                   "ProviderError",
+                   "ProviderRequest",
+                   "ProviderResult",
+                   "ProviderTimeout",
+                   "RateLimited",
+                   "ScriptedStep",
+                   "SecretKey",
+                   "ServerError",
+                   "SystemBlock",
+                   "TextBlock",
+                   "ToolCall",
+                   "ToolResultBlock",
+                   "ToolSchema",
+                   "ToolUseBlock",
+                   "Usage",
+                   "check_model",
 ]

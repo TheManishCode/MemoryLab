@@ -38,9 +38,11 @@ BAD = {
     "ingest unknown key": mutated(ingest={"url": "http://ingest:8000", "token": "tok-tok-tok-tok", "x": 1}),
     "token too short": mutated(ingest={"url": "http://ingest:8000", "token": "short"}),
     "proxy with creds": mutated(ingest={"url": "http://ingest:8000", "token": "tok-tok-tok-tok", "proxy": "http://u:p@x:1"}),
-    "no provider": mutated(provider={}), "unknown provider": mutated(provider={"name": "openai", "api_key": CANARY}),
+    "no provider": mutated(provider={}), "unknown provider": mutated(provider={"name": "mistral", "api_key": CANARY}),
     "key with space": mutated(provider={"name": "anthropic", "api_key": "has a space in it"}),
     "extra provider key": mutated(provider={"name": "anthropic", "api_key": CANARY, "script": []}),
+    "openai extra key": mutated(provider={"name": "openai", "api_key": CANARY, "script": []}),
+    "openai no key": mutated(provider={"name": "openai"}),
     "fake without flag": mutated(provider={"name": "fake", "script": []}),
     "heartbeat zero": mutated(heartbeat_s=0), "heartbeat huge": mutated(heartbeat_s=1000), "heartbeat bool": mutated(heartbeat_s=True),
     "preset_text number": mutated(preset_text=5),
@@ -58,6 +60,14 @@ def test_bad_specs_are_rejected_without_echoing_values(name: str) -> None:
 def test_garbage_and_oversize(raw: bytes) -> None:
     with pytest.raises(SpecError):
         parse_spec(raw, allow_fake=False)
+
+
+@pytest.mark.parametrize("name", ["openai", "openrouter", "groq", "nvidia"])
+def test_openai_compatible_providers_parse(name: str) -> None:
+    job = parse(mutated(provider={"name": name, "api_key": CANARY}))
+    assert job.provider_name == name
+    assert job.api_key is not None and job.api_key.reveal() == CANARY
+    assert job.fake_script is None and CANARY not in repr(job)
 
 
 def test_fake_provider_only_with_the_flag() -> None:

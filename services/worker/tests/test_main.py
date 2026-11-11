@@ -1,3 +1,4 @@
+import copy
 import io
 import json
 import os
@@ -6,11 +7,30 @@ import time
 from pathlib import Path
 
 import pytest
+from labharness.providers.registry import PROVIDER_MODELS
 from runlog.eventlog import EventLogReader
 
 from conftest import CANARY, GAMES, RUN_CONFIG, Env
 from worker import main as worker_main
 from worker.main import main
+from worker.spec import parse_spec
+
+
+@pytest.mark.parametrize("name,cls_name", [
+    ("anthropic", "AnthropicProvider"), ("openai", "OpenAICompatProvider"), ("openrouter", "OpenAICompatProvider"),
+    ("groq", "OpenAICompatProvider"), ("nvidia", "OpenAICompatProvider")])
+def test_make_provider_picks_the_right_adapter(name: str, cls_name: str) -> None:
+    run_config = copy.deepcopy(RUN_CONFIG)
+    run_config["provider"], run_config["model_id"] = name, PROVIDER_MODELS[name][0]
+    spec = {"v": 1, "run_id": "11111111-2222-3333-4444-555555555555", "game": "fixture", "run_config": run_config,
+            "ingest": {"url": "http://ingest:8000", "token": "tok-tok-tok-tok"},
+            "provider": {"name": name, "api_key": CANARY}, "heartbeat_s": 5}
+    job = parse_spec(json.dumps(spec).encode(), allow_fake=False)
+    provider = worker_main.make_provider(job, "http://ml-egress:3128")
+    assert type(provider).__name__ == cls_name and provider.name == name
+    close = getattr(provider, "close", None)
+    if callable(close):
+        close()
 
 
 def run_main(env: Env, stdin: io.StringIO, **kw):  # type: ignore[no-untyped-def]

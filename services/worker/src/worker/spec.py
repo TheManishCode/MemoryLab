@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from labharness.agent import RunConfig
+from labharness.providers.registry import OPENAI_COMPAT
 from labharness.providers.secret import SecretKey
 
 MAX_SPEC_BYTES = 256 * 1024
@@ -75,7 +76,7 @@ def parse_spec(raw: bytes, *, allow_fake: bool) -> Job:
     name = prov.get("name")
     key: SecretKey | None = None
     script: list[dict[str, Any]] | None = None
-    if name == "anthropic":
+    if name == "anthropic" or name in OPENAI_COMPAT:
         if set(prov) != {"name", "api_key"}:
             raise SpecError("bad provider section")
         key = _secret(prov["api_key"])

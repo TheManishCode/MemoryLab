@@ -22,6 +22,8 @@ from labharness.agent import AgentLoop, ResumeState
 from labharness.presets import custom_preset, get_preset
 from labharness.providers import FakeProvider, Provider, ProviderError, ScriptedStep, Usage
 from labharness.providers.anthropic import AnthropicProvider
+from labharness.providers.openai_compat import OpenAICompatProvider
+from labharness.providers.registry import OPENAI_COMPAT
 from labharness.sessions import checkpoint_from_event
 from runlog.client import HttpEventSink, IngestRejected, IngestUnavailable, RedactingSink
 from runlog.redaction import Redactor, ScrubFilter
@@ -36,6 +38,9 @@ def make_provider(job: Job, proxy: str | None) -> Provider:
     if job.provider_name == "anthropic":
         assert job.api_key is not None
         return AnthropicProvider(job.api_key, job.config.model_id, proxy=proxy)
+    if job.provider_name in OPENAI_COMPAT:
+        assert job.api_key is not None
+        return OpenAICompatProvider(job.provider_name, job.api_key, job.config.model_id, proxy=proxy)
     steps: list[Any] = []
     for item in job.fake_script or []:
         if "error" in item:

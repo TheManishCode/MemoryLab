@@ -2,6 +2,14 @@
 
 Format per milestone: scope, changes, tests/evidence, deviations, tag.
 
+## Multi-provider support (branch `feat/providers-openai-compat`, after `fix/ci-baseline`)
+
+- `labharness.providers.openai_compat.OpenAICompatProvider`: one OpenAI-Chat-Completions adapter for OpenAI, OpenRouter, Groq and NVIDIA, parameterised by host and base path, with the Anthropic adapter's security properties (SecretKey `Authorization: Bearer`, fixed host, no redirects, `trust_env=False`, bounded retries, stable error codes, no key/body echo).
+- `providers.registry`: `PROVIDER_MODELS`/`PROVIDER_HOSTS` gain the four providers (+ `OPENAI_COMPAT` base paths); the catalogue (`GET /models`, web form, CLI), `check_model` (API + orchestrator) and the egress host allowlist all read this one table, so no other code changed to accept them. `infra/compose.yaml` egress now allows one host per provider.
+- Worker: `make_provider` and `spec.parse_spec` accept the four names (same `{name, api_key}` shape as Anthropic).
+- Tests: `test_provider_openai_compat.py` (38: request/response shapes incl. images and tool roundtrip, error mapping, retries, key secrecy, host/env isolation, `validate_key`); `make_provider` picks the right adapter per provider; `spec` parses each and still rejects unlisted names. mypy and ruff clean.
+- Not verified against any live API (BLOCKED B-1/B-4): shapes follow the public docs and a mock transport; the key validator is still unwired, so real keys are refused for every provider, as before. See DECISIONS M11-1.
+
 ## CI and supply chain (branch `ci`, after `m9-done`)
 
 - `.github/workflows`: `ci.yml` (python, web, docker, `gate`), `security.yml` (gitleaks history, CodeQL, pip-audit/npm audit/osv-scanner, hadolint, trivy config and images, actionlint, zizmor, `security`), `scorecard.yml`, `release.yml` (GHCR, SPDX SBOM, cosign, provenance); `dependabot.yml`.

@@ -83,7 +83,10 @@ services:
     <<: *hardened
     image: memorylab-egress:dev
     # default deny: the ingest service (private, the only private address allowed) plus the listed public provider hosts
-    command: ["--listen", "0.0.0.0:3128", "--allow-private", "ingest:8000", "--allow", "api.anthropic.com:443"]
+    # (one per allowlisted provider in labharness.providers.registry; add a host only with a code review)
+    command: ["--listen", "0.0.0.0:3128", "--allow-private", "ingest:8000",
+              "--allow", "api.anthropic.com:443", "--allow", "api.openai.com:443", "--allow", "openrouter.ai:443",
+              "--allow", "api.groq.com:443", "--allow", "integrate.api.nvidia.com:443"]
     mem_limit: 128m
     networks:
       sandbox: {aliases: [egress]}
