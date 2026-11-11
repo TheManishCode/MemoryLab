@@ -1,0 +1,18 @@
+{
+  "game_id": "pokemon_red",
+  "licence": "proprietary-local-only",
+  "release_frames": 8,
+  "rom": {
+    "file": "pokemon_red.gb",
+    "sha256": "5ca7ba01642a3b27b0cc0b5349b52792795b62d3ed977e98a09390659af96b7b"
+  },
+  "start_state": {
+    "file": "pokemon_red.state",
+    "pyboy_version": "2.9.0",
+    "sha256": "0588c0e85c907eca6da2920a3a7a685b1fee60dee1deeb8ab58cc46dbe0a5c5d"
+  },
+  "state_map": {
+    "file": "pokemon_red.statemap.json",
+    "sha256": "d6bf628a1de4f16ebaf78896ebf3bda0ae4c01ece109b3a404c5e3b6e35106ec"
+  }
+}

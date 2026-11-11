@@ -2,6 +2,13 @@
 
 Format per milestone: scope, changes, tests/evidence, deviations, tag.
 
+## Local BYO-ROM bundles + local play path (branch `feat/providers-openai-compat`)
+
+- `scripts/import_game.py`: turn a ROM the user owns into a ready-to-benchmark bundle (validate header, install state map, make/take a start state, write + verify `bundle.json`). `scripts/play_local.py`: watch any provider play any bundle locally (real `AgentLoop`, provider key from a gitignored `.env`, no web/sandbox), with `--guide` for game tips.
+- `packages/games/pokemon_red/`: first bundle — **local-only** (ROM + save state gitignored; only the RAM-address state map, `bundle.json`, README committed). Start state scripted past the intro to the controllable bedroom (`scripts/pokered/gen_start.py`); state map from the public pokered RAM map (badges byte as `milestones` → score = badges; party struct; money omitted, BCD).
+- NVIDIA registry models corrected to current, accessible IDs (the old `meta/llama-3.3-70b-instruct` etc. are end-of-life / 404 per account); `nvidia/nemotron-3.5-lightning-30b-a3b` verified live.
+- **First live-API run of the OpenAI-compat adapter**: an NVIDIA key validated and played Pokémon Red end-to-end (tool calls, movement, memory, detectors). `.env`/`.env.*` gitignored; `.env.example` added. See DECISIONS M11-2.
+
 ## Multi-provider support (branch `feat/providers-openai-compat`, after `fix/ci-baseline`)
 
 - `labharness.providers.openai_compat.OpenAICompatProvider`: one OpenAI-Chat-Completions adapter for OpenAI, OpenRouter, Groq and NVIDIA, parameterised by host and base path, with the Anthropic adapter's security properties (SecretKey `Authorization: Bearer`, fixed host, no redirects, `trust_env=False`, bounded retries, stable error codes, no key/body echo).

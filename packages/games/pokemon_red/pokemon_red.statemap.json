@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "state_map_version": 1,
+  "game_id": "pokemon_red",
+  "rom_sha256": "5ca7ba01642a3b27b0cc0b5349b52792795b62d3ed977e98a09390659af96b7b",
+  "core": {
+    "map_id": { "addr": "0xD35E", "width": 1 },
+    "x": { "addr": "0xD362", "width": 1 },
+    "y": { "addr": "0xD361", "width": 1 },
+    "dialog_active": { "addr": "0xCFC4", "width": 1 },
+    "milestones": { "addr": "0xD356", "width": 1 }
+  },
+  "extras": {
+    "in_battle": { "type": "uint", "addr": "0xD057", "width": 1 },
+    "party": {
+      "type": "struct_list",
+      "count": { "addr": "0xD163", "width": 1 },
+      "count_max": 6,
+      "base": "0xD16B",
+      "stride": 44,
+      "fields": {
+        "species": { "offset": 0, "width": 1 },
+        "hp": { "offset": 1, "width": 2, "endian": "big" },
+        "level": { "offset": 33, "width": 1 },
+        "max_hp": { "offset": 34, "width": 2, "endian": "big" }
+      }
+    }
+  }
+}

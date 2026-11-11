@@ -18,7 +18,7 @@ PROVIDER_MODELS: dict[str, tuple[str, ...]] = {
     "openai": ("gpt-5.1", "gpt-5.1-mini", "gpt-4.1", "gpt-4.1-mini"),
     "openrouter": ("openai/gpt-5.1", "anthropic/claude-sonnet-4.5", "google/gemini-2.5-pro", "meta-llama/llama-3.3-70b-instruct"),
     "groq": ("llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b", "moonshotai/kimi-k2-instruct"),
-    "nvidia": ("meta/llama-3.3-70b-instruct", "deepseek-ai/deepseek-r1", "qwen/qwen2.5-coder-32b-instruct", "nvidia/llama-3.1-nemotron-70b-instruct"),
+    "nvidia": ("nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/nemotron-3.5-super-vl-120b-a12b", "deepseek-ai/deepseek-v4.1-flash", "openai/gpt-oss-20b"),
 }
 PROVIDER_HOSTS: dict[str, str] = {
     "anthropic": "api.anthropic.com",

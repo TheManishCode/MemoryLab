@@ -8,3 +8,6 @@ __pycache__/
 *.rtc
 infra/docker/.generated/
 SESSION_STATE.md
+.env
+.env.*
+!.env.example

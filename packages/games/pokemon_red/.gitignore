@@ -1,0 +1,6 @@
+# Local-only game. The ROM and any save state derived from it contain copyrighted Nintendo
+# material: NEVER commit or redistribute them. Provide your own legally-obtained pokemon_red.gb.
+# The state map (RAM addresses = facts), bundle.json and README are not copyrighted and may be versioned.
+*.gb
+*.gbc
+*.state
