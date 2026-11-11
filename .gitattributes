@@ -1,0 +1,23 @@
+# Line-ending policy for a cross-platform (Linux + Windows) checkout.
+#
+# Many files here are pinned by sha256 or compared byte-for-byte (game bundles, state maps,
+# event logs, golden vectors). If git's autocrlf rewrote their line endings on a Windows
+# checkout, those hashes would no longer match. Force LF in the repository AND on checkout on
+# every platform so the bytes are identical everywhere. This is a no-op on Linux/macOS.
+* text=auto eol=lf
+
+# Binary assets: never subject to line-ending conversion or diffing.
+*.gb       binary
+*.gbc      binary
+*.state    binary
+*.bin      binary
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.ico      binary
+*.pdf      binary
+*.woff     binary
+*.woff2    binary
+*.ttf      binary
+*.otf      binary

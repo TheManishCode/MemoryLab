@@ -3,12 +3,18 @@ atomically; never contains a provider key."""
 
 import json
 import os
+import sys
 import tempfile
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .errors import CliError
+
+# POSIX mode bits (0700 dir, 0600 file) and the group/world-writable check only have meaning
+# on POSIX. On Windows file access is governed by ACLs and the per-user profile directory is
+# already private to the user; the POSIX-only steps below are skipped there.
+_POSIX = sys.platform != "win32"
 
 
 @dataclass
@@ -40,19 +46,21 @@ class SessionStore:
         others can write to it (group/world-writable) the session is not stored there at all."""
         d = self.path.parent
         if d.exists():
-            if d.stat().st_mode & 0o022:
+            if _POSIX and d.stat().st_mode & 0o022:
                 raise CliError("config", f"{d} is writable by other users: the session is not stored there "
                                "(choose a private directory with MEMORYLAB_CONFIG_DIR)")
             return
         d.parent.mkdir(parents=True, exist_ok=True)
         d.mkdir(mode=0o700)
-        os.chmod(d, 0o700)                                              # mkdir's mode is masked by the umask
+        if _POSIX:
+            os.chmod(d, 0o700)                                          # mkdir's mode is masked by the umask
 
     def save(self, session: Session) -> None:
         self._prepare_dir()
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".session-")
         try:
-            os.fchmod(fd, 0o600)
+            if _POSIX:
+                os.fchmod(fd, 0o600)
             with os.fdopen(fd, "w") as f:
                 json.dump(asdict(session), f)
             os.replace(tmp, self.path)

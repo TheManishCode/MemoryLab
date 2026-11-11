@@ -82,7 +82,8 @@ def test_a_config_file_with_a_key_in_it_is_refused_without_echoing_it(tmp_path: 
 def test_the_session_file_is_private_and_atomic(tmp_path: Path) -> None:
     store = SessionStore(tmp_path / "cfg" / "session.json")
     store.save(Session("a", "r", time.time() + 900, "u", "e@x.test"))
-    assert stat.S_IMODE(store.path.stat().st_mode) == 0o600 and stat.S_IMODE(store.path.parent.stat().st_mode) == 0o700
+    if os.name != "nt":  # POSIX mode bits; on Windows the file is protected by ACLs, not a mode
+        assert stat.S_IMODE(store.path.stat().st_mode) == 0o600 and stat.S_IMODE(store.path.parent.stat().st_mode) == 0o700
     loose = tmp_path / "cfg"
     store.save(Session("a2", "r2", time.time() + 900, "u", "e@x.test"))
     assert store.load().access_token == "a2"  # type: ignore[union-attr]
@@ -263,6 +264,7 @@ def test_verify_accepts_a_six_digit_code_or_the_pasted_link(tmp_path: Path) -> N
 
 # ---------------------------------------------------------------- the directory is only re-moded when the CLI created it
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file-mode/umask semantics; Windows access control is ACL-based")
 def test_a_directory_the_cli_creates_is_private_whatever_the_umask(tmp_path: Path) -> None:
     old = os.umask(0)
     try:
@@ -273,6 +275,7 @@ def test_a_directory_the_cli_creates_is_private_whatever_the_umask(tmp_path: Pat
     assert stat.S_IMODE(store.path.parent.stat().st_mode) == 0o700 and stat.S_IMODE(store.path.stat().st_mode) == 0o600
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file-mode semantics; Windows access control is ACL-based")
 @pytest.mark.parametrize("mode", [0o755, 0o750, 0o700, 0o755 | 0o1000])
 def test_an_existing_directory_keeps_its_mode(tmp_path: Path, mode: int) -> None:
     d = tmp_path / "shared"
@@ -283,6 +286,7 @@ def test_an_existing_directory_keeps_its_mode(tmp_path: Path, mode: int) -> None
     assert stat.S_IMODE((d / "session.json").stat().st_mode) == 0o600            # the file is private regardless
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX world-writable detection; Windows access control is ACL-based")
 @pytest.mark.parametrize("mode", [0o775, 0o777, 0o757, 0o722])
 def test_a_group_or_world_writable_directory_is_refused_and_left_alone(tmp_path: Path, mode: int) -> None:
     d = tmp_path / "open"
@@ -294,6 +298,7 @@ def test_a_group_or_world_writable_directory_is_refused_and_left_alone(tmp_path:
     assert stat.S_IMODE(d.stat().st_mode) == mode and not (d / "session.json").exists()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX world-writable detection; Windows access control is ACL-based")
 def test_the_cli_exits_17_for_an_unsafe_session_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     d = tmp_path / "open"
     d.mkdir()

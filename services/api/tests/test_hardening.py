@@ -296,7 +296,9 @@ def test_a_deleted_memory_file_is_gone_from_the_tree_and_the_default_read_but_ol
 
 # ---------------------------------------------------------------- login role and required issuer (round 1, fix 7)
 
-def test_the_default_database_role_is_not_a_superuser_and_does_not_bypass_rls() -> None:
+def test_the_default_database_role_is_not_a_superuser_and_does_not_bypass_rls(admin_conn: object) -> None:
+    # admin_conn gates on the database being reachable (skip when down, fail under MEMORYLAB_REQUIRE_DB),
+    # the same contract the rest of the suite uses; this test then connects as the API role itself.
     from api.db import Database
     from api.settings import Settings
     assert Settings.db_url.startswith("postgresql://memorylab_api:")
@@ -310,7 +312,8 @@ def test_the_default_database_role_is_not_a_superuser_and_does_not_bypass_rls() 
         db.close()
 
 
-def test_a_connection_that_skips_apply_identity_can_read_nothing() -> None:
+def test_a_connection_that_skips_apply_identity_can_read_nothing(admin_conn: object) -> None:
+    # admin_conn gates on the database being reachable (see the companion test above).
     import psycopg
 
     from api.db import Database

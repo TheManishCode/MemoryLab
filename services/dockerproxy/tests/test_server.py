@@ -66,13 +66,24 @@ ours = {"Name": f"/{NAME}", "Config": {"Labels": {"memorylab.owner": "memorylab"
 theirs = {"Name": "/postgres", "Config": {"Labels": {}}}
 
 
+async def _start_daemon(daemon: FakeDaemon) -> tuple[asyncio.AbstractServer, str, tempfile.TemporaryDirectory[str] | None]:
+    """Serve the fake daemon the way the proxy will reach it: a unix socket where the platform has
+    them (Linux), otherwise TCP (Windows). Returns the server, the endpoint the proxy connects to,
+    and a temp dir to clean up (unix only)."""
+    if hasattr(asyncio, "start_unix_server"):
+        tmp: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        path = os.path.join(tmp.name, "docker.sock")
+        return await asyncio.start_unix_server(daemon.handle, path), path, tmp
+    up = await asyncio.start_server(daemon.handle, "127.0.0.1", 0)
+    return up, f"tcp:127.0.0.1:{up.sockets[0].getsockname()[1]}", None
+
+
 def with_proxy(test: Callable[[FakeDaemon, int], Awaitable[None]], containers: dict[str, dict[str, Any]] | None = None) -> None:
     async def main() -> None:
-        with tempfile.TemporaryDirectory() as d:
-            path = os.path.join(d, "docker.sock")
-            daemon = FakeDaemon(containers if containers is not None else {NAME: ours, "abc123": ours, "postgres": theirs})
-            up = await asyncio.start_unix_server(daemon.handle, path)
-            proxy = Proxy(POLICY, path, head_timeout_s=2)
+        daemon = FakeDaemon(containers if containers is not None else {NAME: ours, "abc123": ours, "postgres": theirs})
+        up, target, tmp = await _start_daemon(daemon)
+        try:
+            proxy = Proxy(POLICY, target, head_timeout_s=2)
             server = await proxy.start("127.0.0.1", 0)
             port = server.sockets[0].getsockname()[1]
             try:
@@ -80,6 +91,9 @@ def with_proxy(test: Callable[[FakeDaemon, int], Awaitable[None]], containers: d
             finally:
                 server.close()
                 up.close()
+        finally:
+            if tmp is not None:
+                tmp.cleanup()
 
     asyncio.run(main())
 

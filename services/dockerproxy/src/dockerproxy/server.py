@@ -20,6 +20,27 @@ HEADER = re.compile(r"([!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}):[ \t]*(.{0,1024}?)[ \t]
 REASONS = {400: "Bad Request", 403: "Forbidden", 404: "Not Found", 413: "Payload Too Large", 502: "Bad Gateway"}
 
 
+def parse_daemon(spec: str) -> tuple[str, int] | None:
+    """Resolve the daemon endpoint: `(host, port)` for TCP, or ``None`` for a unix socket at `spec`.
+
+    A ``tcp:host:port`` / ``tcp://host:port`` spec selects TCP; any other value is a unix socket
+    path (the normal Linux case, `/var/run/docker.sock`). On a platform without unix sockets
+    (Windows) a non-TCP spec is rejected with guidance, since Docker there is reached over TCP."""
+    low = spec.lower()
+    if low.startswith("tcp:"):
+        rest = spec[4:].lstrip("/")
+        host, _, port = rest.rpartition(":")
+        if not host or not port.isdigit():
+            raise ValueError(f"malformed tcp daemon endpoint {spec!r}; expected tcp:host:port")
+        return host, int(port)
+    if not hasattr(asyncio, "open_unix_connection"):
+        raise ValueError(
+            f"this platform has no unix sockets; pass a tcp daemon endpoint such as "
+            f"tcp:127.0.0.1:2375 (Docker Desktop: enable 'Expose daemon on tcp://'), not {spec!r}"
+        )
+    return None
+
+
 class Refused(Exception):
     def __init__(self, status: int, message: str) -> None:
         super().__init__(message)
@@ -29,14 +50,21 @@ class Refused(Exception):
 class Proxy:
     def __init__(self, policy: Policy, socket_path: str, *, max_connections: int = 32, head_timeout_s: float = 10.0) -> None:
         self.policy, self.socket_path, self.head_timeout_s = policy, socket_path, head_timeout_s
+        self._daemon_tcp = parse_daemon(socket_path)  # (host, port) for TCP, or None for a unix socket
         self._slots = asyncio.Semaphore(max_connections)
 
     async def start(self, host: str, port: int) -> asyncio.Server:
         return await asyncio.start_server(self._handle, host, port, limit=MAX_HEAD * 2)
 
+    async def _open_daemon(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+        """Connect to the Docker daemon: TCP when configured, otherwise its unix socket."""
+        if self._daemon_tcp is not None:
+            return await asyncio.open_connection(*self._daemon_tcp)
+        return await asyncio.open_unix_connection(self.socket_path)
+
     # ---- daemon side ------------------------------------------------------------------------
     async def _inspect(self, ident: str) -> dict[str, Any] | None:
-        reader, writer = await asyncio.open_unix_connection(self.socket_path)
+        reader, writer = await self._open_daemon()
         try:
             writer.write(f"GET /containers/{ident}/json HTTP/1.0\r\nHost: docker\r\n\r\n".encode())
             await writer.drain()
@@ -151,7 +179,7 @@ class Proxy:
 
     async def _forward(self, verdict: Verdict, method: str, target: str, headers: dict[str, str], body: bytes, leftover: bytes,
                        reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        ureader, uwriter = await asyncio.open_unix_connection(self.socket_path)
+        ureader, uwriter = await self._open_daemon()
         try:
             lines = [f"{method} {target} HTTP/1.1", "Host: docker", "User-Agent: " + headers.get("user-agent", "memorylab-dockerproxy")[:200]]
             if "content-type" in headers:
