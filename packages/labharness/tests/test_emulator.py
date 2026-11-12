@@ -1,5 +1,6 @@
 import io
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -170,6 +171,7 @@ def test_child_crash_is_detected_not_hung(emu: Emulator) -> None:
     assert not emu.alive
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="RLIMIT_AS is POSIX-only; on Windows the OS/container is the memory bound")
 def test_memory_limit_is_enforced_in_the_child(bundle) -> None:  # type: ignore[no-untyped-def]
     """Drive the worker entry point below the Limits floor: the rlimit must bite in the child."""
     import multiprocessing as mp
@@ -308,6 +310,7 @@ def test_child_rejects_out_of_bounds_commands_even_from_the_parent(bundle, heade
         assert not e.alive and e.frames == 0
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="RLIMIT_CPU is POSIX-only; on Windows the child is not CPU-capped so this loop would never be killed")
 def test_cpu_limit_kills_the_child_without_hanging(bundle) -> None:  # type: ignore[no-untyped-def]
     import time
     t0 = time.monotonic()
