@@ -2,6 +2,21 @@
 
 Format per milestone: scope, changes, tests/evidence, deviations, tag.
 
+## Experiment statistics (branch `ccr-cdce2714-sgcqry`, after M11)
+
+Role: Data/Backend Engineer + Frontend Engineer. Status: Added.
+
+Reason: an experiment is a one-variable A/B, but its summary pooled all arms into one mean/stdev, which cannot answer "does changing this variable change the score?". A testing lab's output has to be statistically defensible. (DECISIONS M12-1.)
+
+Changes:
+- `services/api/src/api/stats.py` (new, dependency-free): `summarize` (n/mean/median/stdev/min/max + percentile-bootstrap 95% CI) and `compare` (two-sided permutation test — exact or seeded-sample — with a bootstrap CI for the difference, a significance flag, and an underpowered flag). Deterministic (fixed seed).
+- `experiment_view` now reports per-arm statistics (grouped by the normalised variable value) and, for a two-arm experiment, an A/B `comparison`; the overall summary gains `median` and `ci95` and keeps its existing fields. Arm configs read via the existing `api_private.run_config` (one `LEFT JOIN LATERAL`; no new DB object); best-effort, degrades to the pooled summary.
+- Web `experiment-view.tsx`: a per-arm table (n, mean, 95% CI, median, range) and an honest comparison banner (difference, CI, permutation p, caveats).
+
+Verification: `api/test_stats.py` 11 pure unit tests (exact values, determinism, exact vs sampled permutation); `test_experiments.py` +2 DB-gated tests (two-arm significant verdict; underpowered flag). `ruff` + `mypy --strict` clean; web `typecheck`/`lint`/`build`/`vitest` (110) green.
+
+Removed/Reverted: None.
+
 ## Dependency consolidation + Windows support (branch `ccr-cdce2714-sgcqry`, after CI)
 
 Role: Release Engineer + Backend/Frontend Engineer + Application Security Engineer. Status: Changed / Added.
