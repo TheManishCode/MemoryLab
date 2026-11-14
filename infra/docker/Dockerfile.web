@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The Next.js web app (standalone output). Build context: apps/web.  Non-root, meant to run read-only (compose mounts a tmpfs for
 # /tmp and the Next cache). MEMORYLAB_PUBLISHABLE_KEY is the PUBLIC key and may be baked in or given at run time.
-FROM node:24-slim AS build
+FROM node:26-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -10,7 +10,7 @@ ARG MEMORYLAB_PUBLISHABLE_KEY=build-placeholder
 ENV MEMORYLAB_PUBLISHABLE_KEY=${MEMORYLAB_PUBLISHABLE_KEY} NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-FROM node:24-slim
+FROM node:26-slim
 LABEL memorylab.owner="memorylab" memorylab.role="web"
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 # npm, npx and corepack are build tools (and carry their own dependency tree that scanners report): the runtime image runs `node server.js` only

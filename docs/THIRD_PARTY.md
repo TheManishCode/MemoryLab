@@ -67,7 +67,7 @@ and acceptable for a hosted service; anything stronger (GPL/AGPL/SSPL/BUSL) is r
 | Component | Version | Licence | Notes |
 |---|---|---|---|
 | python:3.14-slim | tag `3.14-slim` (Docker Official Image, Debian) | PSF-2.0 (Python); Debian packages under their own licences | Base of every Python image (sandbox, egress proxy, services, Docker filter). Pin by digest when hosting is chosen. |
-| node:24-slim | tag `24-slim` (Docker Official Image) | MIT (Node.js) | Base of the web image. |
+| node:26-slim | tag `26-slim` (Docker Official Image) | MIT (Node.js) | Base of the web image. |
 | docker:cli | tag `cli` (Docker Official Image) | Apache-2.0 | Only `/usr/local/bin/docker` is copied from it, into the orchestrator image (the orchestrator starts sandboxes with the CLI, through `dockerproxy`). |
 | dockerproxy | in-repo (`services/dockerproxy`) | ours | Standard library only; no third-party dependency. The OSS alternative considered (Tecnativa docker-socket-proxy, Apache-2.0, HAProxy-based) filters by endpoint only and cannot refuse a create by its body, so it was not used. |
 | `@vercel/og` (Satori, resvg, Yoga; Geist font) | 1.0.1, compiled into `next/dist/compiled/@vercel/og` | MPL-2.0 (package LICENSE and `package.json`); Geist is OFL-1.1 | Renders the generated OG image (`opengraph-image.tsx`) in the web server. Used unmodified, as shipped inside Next.js; MPL-2.0 is file-level copyleft and we change none of its files. Not part of the browser bundle. |
