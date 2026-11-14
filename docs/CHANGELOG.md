@@ -24,6 +24,7 @@ CI health (first real GitHub run, surfaced by the hosted runners — DECISIONS M
 - dockerproxy: allowlist `OnBuild` (must be empty) for newer Docker CLIs; the integration test derives the daemon API version instead of hardcoding `/v1.56/`. No security rule loosened.
 - labharness: `test_memory_limit_is_enforced_in_the_child` now tests the `apply_limits` mechanism deterministically (an over-cap allocation is refused) instead of relying on a PyBoy import footprint.
 - web image: `apt-get --only-upgrade zlib1g` (the `node:26-slim` Debian 13 base lags `deb13u1`: CVE-2026-76844, CVE-2026-85091), matching the Python images.
+- `ci.yml`: the `python` job now symlinks `~/.local/bin/supabase` (as the `web` and `docker` jobs already do), so the DB-backed `api`/`accounts` suites find the stack instead of erroring with `KeyError: 'API_URL'`.
 
 Verification (this machine): `ruff` clean; `mypy --strict` clean (10/10 packages); Python suites pass (the former lone failure `test_memory_limit_is_enforced_in_the_child` now passes deterministically). dockerproxy unit suite 138 passed. Web: `lint`, `typecheck`, `build`, `npm ci`, `vitest` (110) all green; no new npm advisories vs `main`; Next.js build runs under node 26.13.1. Docker image builds and the zlib remedy confirmed against `node:26-slim`'s `trixie-security` source; full image builds and the Supabase/Docker-gated suites run in CI.
 
