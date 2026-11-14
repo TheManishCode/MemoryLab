@@ -173,24 +173,34 @@ def test_child_crash_is_detected_not_hung(emu: Emulator) -> None:
 
 @pytest.mark.skipif(sys.platform == "win32", reason="RLIMIT_AS is POSIX-only; on Windows the OS/container is the memory bound")
 def test_memory_limit_is_enforced_in_the_child(bundle) -> None:  # type: ignore[no-untyped-def]
-    """Drive the worker entry point below the Limits floor: the rlimit must bite in the child."""
-    import multiprocessing as mp
+    """`apply_limits` (what the worker entry calls) must set RLIMIT_AS/RLIMIT_CPU in a fresh child and the
+    address-space cap must actually bite: an allocation past the cap is refused. This checks the cap against a
+    deliberate over-cap allocation rather than against a PyBoy import, whose footprint is machine-dependent
+    (on some hosts it fits under the 512 MiB probe, on others it does not), and then confirms the real emulator
+    runs under the documented 768 MiB floor."""
+    import subprocess
+    import textwrap
 
-    from labharness import _wire
-
-    ctx = mp.get_context("spawn")
-    parent, child = ctx.Pipe(duplex=True)
-    proc = ctx.Process(target=_worker.main, args=(child, bundle.rom, False, 512 * 1024**2, 3600), daemon=True)
-    proc.start()
-    child.close()
-    try:
-        assert parent.poll(30)
-        header, _ = _wire.decode(parent.recv_bytes())
-        assert header["ok"] is False and header["error"] in ("ImportError", "MemoryError")
-    finally:
-        proc.join(10)
-        if proc.is_alive():
-            proc.kill()
+    cap = 512 * 1024**2
+    probe = textwrap.dedent(f"""
+        import resource
+        from labharness._worker import apply_limits
+        cap = {cap}
+        apply_limits(cap, 3600)
+        as_soft = resource.getrlimit(resource.RLIMIT_AS)[0]
+        cpu_soft = resource.getrlimit(resource.RLIMIT_CPU)[0]
+        bit = 0
+        try:
+            bytearray(cap * 2)            # twice the cap: must fail wherever the address-space cap is honoured
+        except MemoryError:
+            bit = 1
+        print(as_soft, cpu_soft, bit)
+    """)
+    r = subprocess.run([sys.executable, "-c", probe], check=False, capture_output=True, text=True, timeout=30)
+    assert r.returncode == 0, r.stderr
+    as_soft, cpu_soft, bit = r.stdout.split()
+    assert int(as_soft) == cap and int(cpu_soft) == 3600       # the limits were applied in the child
+    assert bit == "1"                                          # and the address-space cap bites
     with Emulator(bundle.rom, bundle.release_frames, Limits(memory_limit_bytes=768 * 1024**2)) as e:  # the documented floor works
         e.load_state(bundle.start_state)
         e.execute(Wait(600))
