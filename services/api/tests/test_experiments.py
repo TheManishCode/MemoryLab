@@ -58,6 +58,32 @@ def test_repeats_of_one_configuration_are_a_valid_experiment(env: Env) -> None:
     assert body["summary"]["n"] == 5 and body["summary"]["warnings"] == []
 
 
+def test_two_arms_get_per_arm_stats_and_a_significant_ab_verdict(env: Env) -> None:
+    owner, game = env.user(), env.game()
+    a = [arm(env, owner, game, "general@1", score=0) for _ in range(5)]   # one arm, all 0
+    b = [arm(env, owner, game, "none@1", score=5) for _ in range(5)]      # the other, all 5
+    s = get(env, owner, post_ok(env, owner, a + b)).json()["summary"]
+    assert s["median"] == 2.5 and isinstance(s["ci95"], list) and len(s["ci95"]) == 2   # overall gains a CI
+    arms = {x["label"]: x for x in s["arms"]}
+    assert set(arms) == {"general@1", "none@1"}
+    assert (arms["general@1"]["n"], arms["general@1"]["mean"]) == (5, 0.0)
+    assert (arms["none@1"]["n"], arms["none@1"]["mean"]) == (5, 5.0)
+    assert isinstance(arms["general@1"]["ci95"], list)
+    c = s["comparison"]
+    assert c is not None
+    assert (c["a_label"], c["b_label"], c["diff_means"]) == ("general@1", "none@1", 5.0)   # sorted: general < none
+    assert c["exact"] is True and c["significant"] is True and c["underpowered"] is False
+
+
+def test_an_underpowered_two_arm_comparison_is_flagged_not_significant(env: Env) -> None:
+    owner, game = env.user(), env.game()
+    a = [arm(env, owner, game, "general@1", score=0) for _ in range(2)]
+    b = [arm(env, owner, game, "none@1", score=2) for _ in range(2)]
+    c = get(env, owner, post_ok(env, owner, a + b)).json()["summary"]["comparison"]
+    assert c is not None
+    assert c["diff_means"] == 2.0 and c["significant"] is False and c["underpowered"] is True
+
+
 def test_runs_still_running_and_unscored_runs_are_flagged_not_counted(env: Env) -> None:
     owner, game = env.user(), env.game()
     done, running = arm(env, owner, game, "general@1", score=7), arm(env, owner, game, "none@1", status="running")

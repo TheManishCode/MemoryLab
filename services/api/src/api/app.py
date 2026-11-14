@@ -12,7 +12,6 @@ import json
 import logging
 import re
 import secrets
-import statistics
 import uuid
 import zipfile
 from collections.abc import Awaitable, Callable
@@ -43,6 +42,7 @@ from .mailjobs import MailJobs
 from .orchestrator_client import KeyValidator, OrchestratorClient, SubmitUnknown, UpstreamError
 from .settings import Settings
 from .signing import LocalUrlSigner, UrlSigner
+from .stats import compare, summarize
 from .stream import (
     MAX_CLIENT_MESSAGE_BYTES,
     TICKET_TTL_S,
@@ -821,6 +821,43 @@ def create_app(settings: Settings, *, verifier: JwtVerifier, db: Database, orche
             return ApiError(409, "limit_reached", "You have the maximum number of experiments")
         raise exc
 
+    def _arm_label(value: Any) -> str:
+        """A short, stable label for one value of the experiment's variable (the arm)."""
+        if value is None:
+            return "default"
+        if isinstance(value, str):
+            return value or "default"
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))[:80]
+
+    def _arms(conn: Conn, variable: str, scored: list[Any]) -> dict[str, tuple[Any, list[float]]]:
+        """Group scored runs by the normalised value of the experiment's variable. Best-effort: any run whose
+        configuration cannot be read or parsed is left out of the arms (the pooled summary still counts it)."""
+        if not scored:
+            return {}
+        try:
+            ids = [str(r["run_id"]) for r in scored]
+            cfgs = conn.execute("select rid, c.config_json from unnest(%s::uuid[]) as rid "
+                                "left join lateral api_private.run_config(rid) c on true", (ids,)).fetchall()
+        except Exception:
+            log.exception("experiment arms: could not load run configs")
+            return {}
+        value_of: dict[str, Any] = {}
+        for cr in cfgs:
+            cfg = cr["config_json"]
+            if cfg is None:
+                continue
+            try:
+                value_of[str(cr["rid"])] = RunConfig.from_dict(dict(cfg)).to_dict().get(variable)
+            except (ValueError, TypeError):
+                continue
+        arms: dict[str, tuple[Any, list[float]]] = {}
+        for r in scored:
+            rid = str(r["run_id"])
+            if rid in value_of:
+                value = value_of[rid]
+                arms.setdefault(_arm_label(value), (value, []))[1].append(float(r["progress_score"]))
+        return arms
+
     def experiment_view(conn: Conn, experiment_id: str) -> dict[str, Any]:
         exp = conn.execute("select id, owner_id, title, variable, visibility, created_at "
                            "from api_private.get_visible_experiment(%s)", (experiment_id,)).fetchone()
@@ -828,13 +865,26 @@ def create_app(settings: Settings, *, verifier: JwtVerifier, db: Database, orche
             raise NotFound
         rows = conn.execute("select run_id, status, title, model_id, provider, steps, tokens, ended_at, "
                             "progress_score, verified from api_private.experiment_runs(%s)", (experiment_id,)).fetchall()
-        scores = [float(r["progress_score"]) for r in rows if r["progress_score"] is not None]
+        scored = [r for r in rows if r["progress_score"] is not None]
+        scores = [float(r["progress_score"]) for r in scored]
         in_progress = sum(r["status"] not in FINAL for r in rows)
         warnings = (["n_below_5"] if len(scores) < 5 else []) + (["runs_still_running"] if in_progress else [])
-        summary = {"n": len(scores), "mean": statistics.fmean(scores) if scores else None,
-                   "min": min(scores) if scores else None, "max": max(scores) if scores else None,
-                   "stdev": statistics.stdev(scores) if len(scores) > 1 else None,
-                   "runs": len(rows), "runs_in_progress": in_progress, "warnings": warnings}
+
+        arms_scores = _arms(conn, exp["variable"], scored)
+        arms = [{"label": label, "value": value, **summarize(vals).to_dict()}
+                for label, (value, vals) in sorted(arms_scores.items())]
+        comparison = None
+        if len(arms_scores) == 2:                                   # the designed one-variable A/B
+            (la, (_, va)), (lb, (_, vb)) = sorted(arms_scores.items())
+            verdict = compare(la, va, lb, vb)
+            comparison = verdict.to_dict() if verdict is not None else None
+
+        overall = summarize(scores)
+        summary = {"n": overall.n, "mean": overall.mean, "median": overall.median,
+                   "min": overall.min, "max": overall.max, "stdev": overall.stdev,
+                   "ci95": list(overall.ci95) if overall.ci95 is not None else None,
+                   "runs": len(rows), "runs_in_progress": in_progress, "warnings": warnings,
+                   "arms": arms, "comparison": comparison}
         return {**_jsonable(exp), "runs": [_jsonable(r) for r in rows], "summary": summary}
 
     @app.post(f"{API}/experiments", status_code=201, dependencies=[WriteGuard])
