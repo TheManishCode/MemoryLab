@@ -191,12 +191,20 @@ def test_everything_else_the_docker_api_offers_is_refused(stack: Running) -> Non
     assert docker("network", "inspect", "x-evil").returncode != 0              # and nothing was created
 
 
+def daemon_api_version() -> str:
+    """The running daemon's API version, so a raw request names a version it supports. A CI runner's daemon can
+    lag the CLI (e.g. max 1.48 while the CLI is 1.56), and a hardcoded /v1.56/ would be refused by such a daemon."""
+    r = docker("version", "--format", "{{.Server.APIVersion}}")
+    v = r.stdout.decode().strip()
+    return v if r.returncode == 0 and v else "1.48"
+
+
 def raw_create(stack: Running, name: str, doc: dict[str, object]) -> tuple[int, str]:
     """POST a create straight to the proxy (not through the CLI), so the body is exactly what the test writes."""
     import http.client
     import json as _json
     conn = http.client.HTTPConnection("127.0.0.1", stack.port, timeout=30)
-    conn.request("POST", f"/v1.56/containers/create?name={name}", _json.dumps(doc), {"Content-Type": "application/json"})
+    conn.request("POST", f"/v{daemon_api_version()}/containers/create?name={name}", _json.dumps(doc), {"Content-Type": "application/json"})
     r = conn.getresponse()
     return r.status, r.read().decode()
 
