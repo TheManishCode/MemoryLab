@@ -23,9 +23,11 @@ from itertools import combinations
 from typing import Any
 
 SEED = 20261114            # fixed: an experiment's statistics are stable across requests and in tests
-BOOTSTRAP = 2000           # resamples for a mean / difference CI
-PERM_SAMPLES = 20000       # relabelings sampled when exact enumeration would be larger than this
-MIN_ARM_N = 5              # below this an arm (or a comparison) is flagged underpowered, not a finding
+BOOTSTRAP = 1000           # resamples for a mean / difference CI (ample for a 95% percentile interval)
+PERM_EXACT_MAX = 10000     # enumerate every relabeling when there are at most this many splits
+PERM_SAMPLES = 2000        # otherwise sample this many relabelings (seeded); resolves p well past the 0.05 call.
+MIN_ARM_N = 5              # Both loops use running sums (not statistics.fmean), so the whole summary is a few ms
+                           # even at the 50-run experiment cap — this runs on every GET of an experiment.
 _CI = 0.95
 
 
@@ -45,7 +47,8 @@ def _percentile(sorted_values: list[float], q: float) -> float:
 
 def _bootstrap_means(values: list[float], rng: random.Random, resamples: int) -> list[float]:
     n = len(values)
-    return [statistics.fmean(rng.choices(values, k=n)) for _ in range(resamples)]
+    choices = rng.choices                                    # bound once; running sum is far cheaper than fmean
+    return [sum(choices(values, k=n)) / n for _ in range(resamples)]
 
 
 def _ci_bounds(samples: list[float], level: float = _CI) -> tuple[float, float]:
@@ -103,29 +106,26 @@ class Comparison:
 
 
 def _permutation_p(a: list[float], b: list[float], seed: int) -> tuple[float, bool]:
-    """Two-sided p for |mean(b) - mean(a)| under relabeling of the pooled scores. Returns (p, exact)."""
+    """Two-sided p for |mean(b) - mean(a)| under relabeling of the pooled scores. Returns (p, exact).
+
+    The statistic for any split depends only on the sum assigned to arm A (the rest goes to B), so each
+    relabeling costs one sum of `na` values — no list slicing and no statistics.fmean in the loop."""
     pool = a + b
-    na, total = len(a), len(a) + len(b)
-    observed = abs(statistics.fmean(b) - statistics.fmean(a))
+    na, nb, total = len(a), len(b), len(a) + len(b)
+    total_sum = sum(pool)
+    observed = abs(sum(b) / nb - sum(a) / na)
     eps = 1e-9
+
+    def is_extreme(group_a_sum: float) -> bool:
+        return abs((total_sum - group_a_sum) / nb - group_a_sum / na) >= observed - eps
+
     n_splits = math.comb(total, na)
-    if n_splits <= PERM_SAMPLES:                       # exact: enumerate every way to pick arm A
-        extreme = 0
-        for idx in combinations(range(total), na):
-            pick = set(idx)
-            group_a = [pool[i] for i in idx]
-            group_b = [pool[i] for i in range(total) if i not in pick]
-            if abs(statistics.fmean(group_b) - statistics.fmean(group_a)) >= observed - eps:
-                extreme += 1
+    if n_splits <= PERM_EXACT_MAX:                     # exact: enumerate every way to choose arm A
+        extreme = sum(1 for combo in combinations(pool, na) if is_extreme(sum(combo)))
         return extreme / n_splits, True
     rng = random.Random(seed)                          # sampled, with the +1 correction (p is never 0)
-    extreme = 0
-    for _ in range(PERM_SAMPLES):
-        shuffled = pool[:]
-        rng.shuffle(shuffled)
-        group_a, group_b = shuffled[:na], shuffled[na:]
-        if abs(statistics.fmean(group_b) - statistics.fmean(group_a)) >= observed - eps:
-            extreme += 1
+    population = range(total)
+    extreme = sum(1 for _ in range(PERM_SAMPLES) if is_extreme(sum(pool[i] for i in rng.sample(population, na))))
     return (extreme + 1) / (PERM_SAMPLES + 1), False
 
 

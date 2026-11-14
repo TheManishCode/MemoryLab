@@ -827,7 +827,7 @@ def create_app(settings: Settings, *, verifier: JwtVerifier, db: Database, orche
             return "default"
         if isinstance(value, str):
             return value or "default"
-        return json.dumps(value, sort_keys=True, separators=(",", ":"))[:80]
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)[:80]
 
     def _arms(conn: Conn, variable: str, scored: list[Any]) -> dict[str, tuple[Any, list[float]]]:
         """Group scored runs by the normalised value of the experiment's variable. Best-effort: any run whose
