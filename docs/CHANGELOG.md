@@ -19,7 +19,13 @@ Removed/Held (not adopted, with reasons — DECISIONS M11-4, M11-5):
 - **TypeScript 7** (#3) held: no released `typescript-eslint` supports it (peers `typescript <6.1.0`); adopting it would break the `lint` gate. TypeScript stays `^6.0.3`. PR #3 left open.
 - **Python 3.15 base** (part of #1) held: pinned `pyboy==2.9.0` (determinism contract, M1-10) has no cp315 wheel and the slim images have no compiler, so worker/service images fail to build on 3.15. Base stays 3.14. PR #1 left open.
 
-Verification (this machine): `ruff` clean; `mypy --strict` clean (10/10 packages); Python suites pass (lone failure `test_memory_limit_is_enforced_in_the_child` fails identically on `main` — sandbox has no `RLIMIT_AS` enforcement, not a regression). Web: `lint`, `typecheck`, `build`, `npm ci`, `vitest` (110) all green; no new npm advisories vs `main`. Docker: web image (node 26) builds; worker image on python 3.15 fails (pyboy cp315), which is why that bump is held.
+CI health (first real GitHub run, surfaced by the hosted runners — DECISIONS M11-6, M11-7):
+- Dependabot `cooldown` added (zizmor `security` gate).
+- dockerproxy: allowlist `OnBuild` (must be empty) for newer Docker CLIs; the integration test derives the daemon API version instead of hardcoding `/v1.56/`. No security rule loosened.
+- labharness: `test_memory_limit_is_enforced_in_the_child` now tests the `apply_limits` mechanism deterministically (an over-cap allocation is refused) instead of relying on a PyBoy import footprint.
+- web image: `apt-get --only-upgrade zlib1g` (the `node:26-slim` Debian 13 base lags `deb13u1`: CVE-2026-76844, CVE-2026-85091), matching the Python images.
+
+Verification (this machine): `ruff` clean; `mypy --strict` clean (10/10 packages); Python suites pass (the former lone failure `test_memory_limit_is_enforced_in_the_child` now passes deterministically). dockerproxy unit suite 138 passed. Web: `lint`, `typecheck`, `build`, `npm ci`, `vitest` (110) all green; no new npm advisories vs `main`; Next.js build runs under node 26.13.1. Docker image builds and the zlib remedy confirmed against `node:26-slim`'s `trixie-security` source; full image builds and the Supabase/Docker-gated suites run in CI.
 
 ## CI and supply chain (branch `ci`, after `m9-done`)
 
