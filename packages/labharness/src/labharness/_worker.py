@@ -6,7 +6,7 @@ failure the emulator state is unknown, so it is never reused.
 
 import hashlib
 import io
-import resource
+import sys
 import warnings
 from multiprocessing.connection import Connection
 from typing import Any
@@ -35,6 +35,13 @@ class WorkerError(Exception):
 
 
 def apply_limits(memory_limit_bytes: int, cpu_limit_s: int) -> None:
+    # POSIX rlimits are defense-in-depth; the container (and on Windows the OS/container)
+    # is the real memory bound (see emulator.MIN_MEMORY_LIMIT_BYTES). The `resource` module
+    # does not exist on Windows, so there this is a no-op and the bound is enforced elsewhere.
+    if sys.platform == "win32":
+        return
+    import resource
+
     resource.setrlimit(resource.RLIMIT_AS, (memory_limit_bytes, memory_limit_bytes))
     resource.setrlimit(resource.RLIMIT_CPU, (cpu_limit_s, cpu_limit_s))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))

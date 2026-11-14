@@ -89,6 +89,15 @@ def test_the_real_sandbox_create_is_accepted() -> None:
     assert create(GOOD) == []
 
 
+def test_an_onbuild_field_is_accepted_only_when_empty() -> None:
+    # Docker CLIs newer than the captured 29.9 serialise an OnBuild Config field (as null) in the create body.
+    # It has no effect on `docker run` (OnBuild triggers only fire when an image is a build base), but the
+    # proxy still default-denies it unless it is empty, so a non-empty value can never slip through.
+    assert create(mutated(OnBuild=None)) == []                                        # what a newer CLI actually sends
+    assert create(mutated(OnBuild=[])) == []
+    assert create(mutated(OnBuild=["RUN touch /pwned"])) == ["Cmd/Entrypoint/WorkingDir/Volumes/OnBuild"]
+
+
 def test_a_runtime_and_an_environment_variable_are_accepted_only_when_configured() -> None:
     doc = json.dumps(mutated(**{"HostConfig.Runtime": "runsc", "Env": ["MEMORYLAB_ALLOW_FAKE_PROVIDER=1"]})).encode()
     assert sorted(check_create(doc, NAME, POLICY)) == ["Env"]                       # by default a sandbox gets no environment at all
@@ -164,10 +173,10 @@ def test_a_runtime_and_an_environment_variable_are_accepted_only_when_configured
     ({"User": "root"}, "User"),
     ({"User": "10001:0"}, "User"),
     ({"User": ABSENT}, "User"),
-    ({"Entrypoint": ["/bin/sh"]}, "Cmd/Entrypoint/WorkingDir/Volumes"),
-    ({"Cmd": ["sh", "-c", "id"]}, "Cmd/Entrypoint/WorkingDir/Volumes"),
-    ({"WorkingDir": "/"}, "Cmd/Entrypoint/WorkingDir/Volumes"),
-    ({"Volumes": {"/data": {}}}, "Cmd/Entrypoint/WorkingDir/Volumes"),
+    ({"Entrypoint": ["/bin/sh"]}, "Cmd/Entrypoint/WorkingDir/Volumes/OnBuild"),
+    ({"Cmd": ["sh", "-c", "id"]}, "Cmd/Entrypoint/WorkingDir/Volumes/OnBuild"),
+    ({"WorkingDir": "/"}, "Cmd/Entrypoint/WorkingDir/Volumes/OnBuild"),
+    ({"Volumes": {"/data": {}}}, "Cmd/Entrypoint/WorkingDir/Volumes/OnBuild"),
     ({"Env": ["ANTHROPIC_API_KEY=sk-ant-x"]}, "Env"),
     ({"Env": ["LD_PRELOAD=/tmp/x.so"]}, "Env"),
     ({"Env": [7]}, "Env"),

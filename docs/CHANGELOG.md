@@ -2,6 +2,32 @@
 
 Format per milestone: scope, changes, tests/evidence, deviations, tag.
 
+## Dependency consolidation + Windows support (branch `ccr-cdce2714-sgcqry`, after CI)
+
+Role: Release Engineer + Backend/Frontend Engineer + Application Security Engineer. Status: Changed / Added.
+
+Reason: six PRs stood open against `main` — one feature (Windows support, from a fork) and five Dependabot updates — individually mergeable but colliding pairwise on `uv.lock` and the web lockfile, so they could not be merged cleanly in sequence. Consolidated into one branch with coherent, regenerated lockfiles (DECISIONS M11-1).
+
+Changes:
+- **Windows cross-platform support** (#6, authorship preserved): POSIX-only surfaces (`resource`, unix sockets, `os.fchmod`/file-mode checks) guarded behind `sys.platform`; `.gitattributes` forces LF so sha256-pinned bundles verify on Windows; POSIX-only tests skipped there. No Linux behaviour change.
+- **Python deps** (#5, #4): `pyjwt[crypto]>=2.15.1` (security fixes), `psycopg[binary,pool]>=3.3.8`; `uv.lock` regenerated once (pyjwt 2.15.1, psycopg 3.3.8, psycopg-pool 3.3.3).
+- **Web deps** (#2): `eslint ^9.39.5 -> ^10.14.0` (resolves to 10.15.0); `apps/web/package-lock.json` regenerated.
+- **Base image** (part of #1): web `node:24-slim -> node:26-slim`.
+- **CI fix** (surfaced on the first real workflow run, not from the six PRs): added a 7-day `cooldown` to each Dependabot ecosystem, clearing the `security` gate's `dependabot-cooldown` zizmor findings (DECISIONS M11-6).
+
+Removed/Held (not adopted, with reasons — DECISIONS M11-4, M11-5):
+- **TypeScript 7** (#3) held: no released `typescript-eslint` supports it (peers `typescript <6.1.0`); adopting it would break the `lint` gate. TypeScript stays `^6.0.3`. PR #3 left open.
+- **Python 3.15 base** (part of #1) held: pinned `pyboy==2.9.0` (determinism contract, M1-10) has no cp315 wheel and the slim images have no compiler, so worker/service images fail to build on 3.15. Base stays 3.14. PR #1 left open.
+
+CI health (first real GitHub run, surfaced by the hosted runners — DECISIONS M11-6, M11-7):
+- Dependabot `cooldown` added (zizmor `security` gate).
+- dockerproxy: allowlist `OnBuild` (must be empty) for newer Docker CLIs; the integration test derives the daemon API version instead of hardcoding `/v1.56/`. No security rule loosened.
+- labharness: `test_memory_limit_is_enforced_in_the_child` now tests the `apply_limits` mechanism deterministically (an over-cap allocation is refused) instead of relying on a PyBoy import footprint.
+- web image: `apt-get --only-upgrade zlib1g` (the `node:26-slim` Debian 13 base lags `deb13u1`: CVE-2026-76844, CVE-2026-85091), matching the Python images.
+- `ci.yml`: the `python` job now symlinks `~/.local/bin/supabase` (as the `web` and `docker` jobs already do), so the DB-backed `api`/`accounts` suites find the stack instead of erroring with `KeyError: 'API_URL'`.
+
+Verification (this machine): `ruff` clean; `mypy --strict` clean (10/10 packages); Python suites pass (the former lone failure `test_memory_limit_is_enforced_in_the_child` now passes deterministically). dockerproxy unit suite 138 passed. Web: `lint`, `typecheck`, `build`, `npm ci`, `vitest` (110) all green; no new npm advisories vs `main`; Next.js build runs under node 26.13.1. Docker image builds and the zlib remedy confirmed against `node:26-slim`'s `trixie-security` source; full image builds and the Supabase/Docker-gated suites run in CI.
+
 ## CI and supply chain (branch `ci`, after `m9-done`)
 
 - `.github/workflows`: `ci.yml` (python, web, docker, `gate`), `security.yml` (gitleaks history, CodeQL, pip-audit/npm audit/osv-scanner, hadolint, trivy config and images, actionlint, zizmor, `security`), `scorecard.yml`, `release.yml` (GHCR, SPDX SBOM, cosign, provenance); `dependabot.yml`.

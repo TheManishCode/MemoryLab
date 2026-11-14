@@ -7,7 +7,7 @@ name = "api"
 version = "0.1.0"
 description = "Memory Lab public API: verified Supabase JWT, RLS-backed reads, one visibility dependency"
 requires-python = ">=3.14"
-dependencies = ["runlog", "labharness", "ingest", "fastapi>=0.115", "uvicorn>=0.30", "psycopg[binary,pool]>=3.2", "pyjwt[crypto]>=2.9", "httpx>=0.27"]
+dependencies = ["runlog", "labharness", "ingest", "fastapi>=0.115", "uvicorn>=0.30", "psycopg[binary,pool]>=3.3.8", "pyjwt[crypto]>=2.15.1", "httpx>=0.27"]
 
 [tool.uv.sources]
 runlog = { workspace = true }

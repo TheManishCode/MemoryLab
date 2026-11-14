@@ -7,7 +7,7 @@ name = "accounts"
 version = "0.1.0"
 description = "Memory Lab accounts service: the only holder (with ingest and the orchestrator reaper) of service-role access, used to erase an account"
 requires-python = ">=3.14"
-dependencies = ["ingest", "httpx>=0.27", "fastapi>=0.115", "uvicorn>=0.30", "psycopg[binary,pool]>=3.2"]
+dependencies = ["ingest", "httpx>=0.27", "fastapi>=0.115", "uvicorn>=0.30", "psycopg[binary,pool]>=3.3.8"]
 
 [tool.uv.sources]
 ingest = { workspace = true }

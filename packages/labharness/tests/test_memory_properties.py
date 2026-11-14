@@ -48,7 +48,9 @@ def test_check_path_matches_reference_and_accepted_paths_are_safe(path: str) -> 
     # Safe as a plain key and, even if misused as a path, cannot escape or be absolute:
     assert not posixpath.isabs(path) and posixpath.normpath(path) == path
     assert ".." not in path.split("/") and "\\" not in path and "\x00" not in path and "%" not in path
-    assert os.path.normpath(os.path.join("/jail", path)).startswith("/jail/")
+    # posixpath (not os.path): memory keys are always POSIX-style, and os.path is ntpath on Windows.
+    # On Linux os.path IS posixpath, so this is identical there.
+    assert posixpath.normpath(posixpath.join("/jail", path)).startswith("/jail/")
 
 
 @settings(max_examples=1500, deadline=None)

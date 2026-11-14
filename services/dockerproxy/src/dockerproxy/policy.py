@@ -195,7 +195,7 @@ def _hostconfig(hc: Mapping[str, Any], p: Policy) -> list[str]:
 
 
 TOP_KEYS = ("Hostname", "Domainname", "User", "AttachStdin", "AttachStdout", "AttachStderr", "Tty", "OpenStdin", "StdinOnce", "Env", "Cmd",
-            "Image", "Volumes", "WorkingDir", "Entrypoint", "Labels", "StopTimeout", "HostConfig", "NetworkingConfig")
+            "Image", "Volumes", "WorkingDir", "Entrypoint", "OnBuild", "Labels", "StopTimeout", "HostConfig", "NetworkingConfig")
 HOSTCONFIG_KEYS = CHECKED | RESOURCE_KNOBS | {"Runtime"}
 SCALAR = (int, float, str, bool, type(None))
 
@@ -285,8 +285,9 @@ def _semantics(doc: dict[str, Any], name: str, policy: Policy) -> list[str]:
         bad.append("Labels")
     if not isinstance(doc.get("User"), str) or not USER.fullmatch(doc["User"]):
         bad.append("User")                                              # never root
-    if not _empty(doc.get("Cmd")) or not _empty(doc.get("Entrypoint")) or not _empty(doc.get("WorkingDir")) or not _empty(doc.get("Volumes")):
-        bad.append("Cmd/Entrypoint/WorkingDir/Volumes")                 # the image decides what runs
+    if (not _empty(doc.get("Cmd")) or not _empty(doc.get("Entrypoint")) or not _empty(doc.get("WorkingDir"))
+            or not _empty(doc.get("Volumes")) or not _empty(doc.get("OnBuild"))):
+        bad.append("Cmd/Entrypoint/WorkingDir/Volumes/OnBuild")         # the image decides what runs (OnBuild: a Config field newer CLIs send as null; must stay empty)
     env = doc.get("Env")
     if env is not None and not isinstance(env, list):
         bad.append("Env")

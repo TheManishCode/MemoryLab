@@ -62,7 +62,10 @@ def test_no_temp_files_remain_and_listing_hides_them(store: LocalObjectStore) ->
 def test_a_symlink_cannot_lead_outside_the_root(store: LocalObjectStore, tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
-    (store.root / "link").symlink_to(outside)
+    try:
+        (store.root / "link").symlink_to(outside)
+    except OSError:  # Windows refuses symlink creation without privilege/Developer Mode
+        pytest.skip("creating a symlink requires privilege on this platform")
     with pytest.raises(BadKey):
         store.put("link/escape.txt", b"x")
     with pytest.raises(BadKey):

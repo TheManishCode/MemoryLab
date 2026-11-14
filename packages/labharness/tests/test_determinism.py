@@ -228,6 +228,7 @@ def rss_kb(pid: int) -> int:
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(sys.platform == "win32", reason="RSS is read from /proc/<pid>/status, which is Linux-only")
 def test_long_run_does_not_grow_child_memory(bundle) -> None:  # type: ignore[no-untyped-def]
     with Session(bundle, Limits(max_steps=2000)) as s:
         s.open()
