@@ -5,6 +5,7 @@ updates:
   - package-ecosystem: github-actions        # keeps the SHA pins in .github/workflows current (the version comment is updated with the SHA)
     directory: /
     schedule: {interval: weekly, day: monday}
+    cooldown: {default-days: 7}                 # a release must age 7 days before an update PR opens (supply-chain safety)
     groups:
       actions: {patterns: ["*"]}
     commit-message: {prefix: "ci"}
@@ -13,6 +14,7 @@ updates:
   - package-ecosystem: npm                   # apps/web
     directory: /apps/web
     schedule: {interval: weekly, day: monday}
+    cooldown: {default-days: 7}                 # a release must age 7 days before an update PR opens (supply-chain safety)
     groups:
       npm-minor-patch: {update-types: [minor, patch]}
     commit-message: {prefix: "web"}
@@ -21,6 +23,7 @@ updates:
   - package-ecosystem: uv                    # the Python workspace (uv.lock at the root)
     directory: /
     schedule: {interval: weekly, day: monday}
+    cooldown: {default-days: 7}                 # a release must age 7 days before an update PR opens (supply-chain safety)
     groups:
       python-minor-patch: {update-types: [minor, patch]}
     commit-message: {prefix: "py"}
@@ -29,6 +32,7 @@ updates:
   - package-ecosystem: docker                # base images in infra/docker/Dockerfile.*
     directory: /infra/docker
     schedule: {interval: weekly, day: monday}
+    cooldown: {default-days: 7}                 # a release must age 7 days before an update PR opens (supply-chain safety)
     groups:
       docker-base-images: {patterns: ["*"]}
     commit-message: {prefix: "docker"}

@@ -13,6 +13,7 @@ Changes:
 - **Python deps** (#5, #4): `pyjwt[crypto]>=2.15.1` (security fixes), `psycopg[binary,pool]>=3.3.8`; `uv.lock` regenerated once (pyjwt 2.15.1, psycopg 3.3.8, psycopg-pool 3.3.3).
 - **Web deps** (#2): `eslint ^9.39.5 -> ^10.14.0` (resolves to 10.15.0); `apps/web/package-lock.json` regenerated.
 - **Base image** (part of #1): web `node:24-slim -> node:26-slim`.
+- **CI fix** (surfaced on the first real workflow run, not from the six PRs): added a 7-day `cooldown` to each Dependabot ecosystem, clearing the `security` gate's `dependabot-cooldown` zizmor findings (DECISIONS M11-6).
 
 Removed/Held (not adopted, with reasons — DECISIONS M11-4, M11-5):
 - **TypeScript 7** (#3) held: no released `typescript-eslint` supports it (peers `typescript <6.1.0`); adopting it would break the `lint` gate. TypeScript stays `^6.0.3`. PR #3 left open.
