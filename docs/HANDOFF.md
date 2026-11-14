@@ -4,6 +4,7 @@ Current state, updated at every milestone.
 
 ## State
 - **M1–M9 done; public launch is blocked only on the owner inputs in `BLOCKED.md`** (checklist verdicts: `docs/LAUNCH.md`). Older per-milestone notes follow.
+- **Dependency consolidation (branch `ccr-cdce2714-sgcqry`):** merged the six open PRs into one coherent branch (DECISIONS M11, CHANGELOG). Adopted: Windows support (#6), pyjwt 2.15.1 + psycopg 3.3.8 (#5/#4), ESLint 10 (#2), node:26-slim web base (part of #1). **Held (PRs left open):** TypeScript 7 (#3) — no `typescript-eslint` supports it yet; Python 3.15 base (part of #1) — pinned `pyboy==2.9.0` has no cp315 wheel. Revisit each when its upstream catches up.
 - Milestone 1 (emulator harness) and M1-close are implemented and tested. See CHANGELOG.md.
 - M2 memory service implemented and tested (`labharness.memory`).
 - M3 agent loop, Anthropic adapter (mock-tested only), presets, detectors implemented.
