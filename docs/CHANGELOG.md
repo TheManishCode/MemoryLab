@@ -15,6 +15,8 @@ Changes:
 
 Verification: `api/test_stats.py` 11 pure unit tests (exact values, determinism, exact vs sampled permutation); `test_experiments.py` +2 DB-gated tests (two-arm significant verdict; underpowered flag). `ruff` + `mypy --strict` clean; web `typecheck`/`lint`/`build`/`vitest` (110) green.
 
+Hardening (DECISIONS M12-2): the per-arm stats run on every `GET /experiments/{id}`, so the permutation/bootstrap loops were switched to running sums with right-sized counts (worst case ~171 ms → ~21 ms at the 50-run cap), and `_arm_label` serialises with `default=str` so a non-JSON value cannot 500 the summary.
+
 Removed/Reverted: None.
 
 ## Dependency consolidation + Windows support (branch `ccr-cdce2714-sgcqry`, after CI)
