@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Sandbox image: runs ONE agent run. No shell tools beyond the base image, no secrets baked in,
 # non-root, meant to be started read-only with all capabilities dropped (see orchestrator).
-FROM python:3.14-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /src
 COPY infra/docker/.generated/requirements-worker.txt /tmp/requirements.txt
 # Third-party dependencies come from the lockfile with hashes; our own packages are installed with
@@ -20,7 +20,7 @@ RUN set -e; d=$(find /install -type d -path '*sdl2dll/dll' | head -1); \
     if PYTHONPATH=/install/lib/python3.14/site-packages python -c "import pyboy" 2>/dev/null; then echo "pruned $(ls /tmp/dll.bak | wc -l) -> $(ls $d | wc -l) libraries"; \
     else rm -rf "$d" && cp -a /tmp/dll.bak "$d" && echo "pruning broke PyBoy: kept all libraries"; fi
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 LABEL memorylab.owner="memorylab" memorylab.role="sandbox-worker"
 # pip is a build tool: the runtime image does not carry it (or its vendored copies of msgpack, urllib3 and friends, which scanners report)
 # --only-upgrade zlib1g: the base image can lag Debian's security repository (scanners report the gap until the base is rebuilt)

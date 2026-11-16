@@ -5,7 +5,7 @@
 # dropped (compose does that); it holds no secrets, every value comes from the environment.
 #   docker build -f infra/docker/Dockerfile.service --build-arg SERVICE=api --build-arg PKGS="packages/runlog packages/labharness services/ingest services/api" .
 #   --target plain (default) | with-docker (the orchestrator: adds the Docker CLI it launches sandboxes with)
-FROM python:3.14-slim AS build
+FROM python:3.15-slim AS build
 ARG SERVICE
 ARG PKGS
 WORKDIR /src
@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir --no-deps --prefix=/install $PKGS
 
 FROM docker:cli AS dockercli
 
-FROM python:3.14-slim AS plain
+FROM python:3.15-slim AS plain
 ARG SERVICE
 LABEL memorylab.owner="memorylab" memorylab.role="${SERVICE}"
 # pip is a build tool: the runtime image does not carry it (or its vendored copies of msgpack, urllib3 and friends, which scanners report)
