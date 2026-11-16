@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 # Egress allowlist proxy: the only way out of the sandbox network. Standard library only.
-FROM python:3.14-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /src
 COPY services/egressproxy ./services/egressproxy
 RUN pip install --no-cache-dir --no-deps --prefix=/install ./services/egressproxy
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 LABEL memorylab.owner="memorylab" memorylab.role="egress-proxy"
 # pip is a build tool: the runtime image does not carry it (or its vendored copies of msgpack, urllib3 and friends, which scanners report)
 # --only-upgrade zlib1g: the base image can lag Debian's security repository (scanners report the gap until the base is rebuilt)
